@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guerra dei Pianeti</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght:700;900&family=Rajdhani:wght:400;600&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #gameCanvas {
+            display: block;
+            background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a14 100%);
+        }
+
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px;
+            color: #fff;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        #score {
+            font-family: 'Orbitron', monospace;
+            font-size: 24px;
+            font-weight: 900;
+            text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
+            color: #00ffff;
+        }
+
+        #level {
+            font-family: 'Orbitron', monospace;
+            font-size: 20px;
+            font-weight: 700;
+            margin-top: 10px;
+            color: #ff00ff;
+            text-shadow: 0 0 10px #ff00ff;
+        }
+
+        #planet {
+            font-family: 'Orbitron', monospace;
+            font-size: 18px;
+            margin-top: 5px;
+            color: #ffaa00;
+            text-shadow: 0 0 8px #ffaa00;
+        }
+
+        #message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Orbitron', monospace;
+            font-size: 48px;
+            font-weight: 900;
+            color: #ff0000;
+            text-shadow: 
+                0 0 20px #ff0000,
+                0 0 40px #ff0000,
+                0 0 60px #ff0000;
+            opacity: 0;
+            pointer-events: none;
+            animation: messageFlash 0.8s ease-out;
+            white-space: nowrap;
+        }
+
+        @keyframes messageFlash {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        #levelComplete {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Orbitron', monospace;
+            font-size: 64px;
+            font-weight: 900;
+            color: #00ff00;
+            text-shadow: 
+                0 0 30px #00ff00,
+                0 0 60px #00ff00;
+            display: none;
+            text-align: center;
+            animation: levelCompleteAnim 2s ease-out;
+        }
+
+        @keyframes levelCompleteAnim {
+            0% { transform: translate(-50%, -50%) scale(0.5) rotate(-10deg); opacity: 0; }
+            50% { transform: translate(-50%, -50%) scale(1.1) rotate(0deg); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
+        }
+
+        #startScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, rgba(26, 26, 46, 0.95) 0%, rgba(10, 10, 20, 0.98) 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        #startScreen h1 {
+            font-family: 'Orbitron', monospace;
+            font-size: 72px;
+            font-weight: 900;
+            color: #00ffff;
+            text-shadow: 
+                0 0 20px #00ffff,
+                0 0 40px #00ffff,
+                0 0 60px #00ffff;
+            margin-bottom: 40px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        #startButton {
+            font-family: 'Orbitron', monospace;
+            font-size: 32px;
+            font-weight: 900;
+            padding: 20px 60px;
+            background: linear-gradient(135deg, #ff00ff 0%, #00ffff 100%);
+            border: none;
+            color: #000;
+            cursor: pointer;
+            pointer-events: auto;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.6);
+            transition: all 0.3s;
+        }
+
+        #startButton:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 50px rgba(255, 0, 255, 0.9);
+        }
+
+        #instructions {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 20px;
+            color: #fff;
+            margin-top: 30px;
+            text-align: center;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="ui">
+        <div id="score">Punteggio: 0</div>
+        <div id="level">Livello: 1</div>
+        <div id="planet">Pianeta: Mercurio</div>
+    </div>
+    <div id="message"></div>
+    <div id="levelComplete"></div>
+    
+    <div id="startScreen">
+        <h1>GUERRA DEI PIANETI</h1>
+        <button id="startButton">INIZIA BATTAGLIA</button>
+        <div id="instructions">
+            Usa il MOUSE per mirare<br>
+            Clicca per SPARARE<br>
+            Distruggi tutte le astronavi nemiche!
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const planets = [
+            { name: 'Mercurio', color: '#a0a0a0', enemyCount: 5 },
+            { name: 'Venere', color: '#ffa500', enemyCount: 7 },
+            { name: 'Terra', color: '#0066ff', enemyCount: 10 },
+            { name: 'Marte', color: '#ff4500', enemyCount: 12 },
+            { name: 'Giove', color: '#daa520', enemyCount: 15 },
+            { name: 'Saturno', color: '#f4e4c1', enemyCount: 18 },
+            { name: 'Urano', color: '#4fd0e0', enemyCount: 20 },
+            { name: 'Nettuno', color: '#4169e1', enemyCount: 25 }
+        ];
+
+        let gameState = {
+            score: 0,
+            level: 0,
+            enemies: [],
+            bullets: [],
+            stars: [],
+            particles: [],
+            mouseX: 0,
+            mouseY: 0,
+            gameStarted: false,
+            playerX: canvas.width / 2,
+            playerY: canvas.height - 100
+        };
+
+        class Star {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2;
+                this.speed = Math.random() * 0.5 + 0.1;
+                this.opacity = Math.random();
+            }
+
+            update() {
+                this.y += this.speed;
+                if (this.y > canvas.height) {
+                    this.y = 0;
+                    this.x = Math.random() * canvas.width;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 8;
+                this.vy = (Math.random() - 0.5) * 8;
+                this.size = Math.random() * 4 + 2;
+                this.life = 1;
+                this.color = color;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= 0.02;
+                this.size *= 0.97;
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = this.life;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        class Enemy {
+            constructor() {
+                this.x = Math.random() * (canvas.width - 60) + 30;
+                this.y = Math.random() * -300 - 50;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = Math.random() * 2 + 1;
+                this.size = 30;
+                this.health = 1;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                if (this.x < this.size || this.x > canvas.width - this.size) {
+                    this.vx *= -1;
+                }
+            }
+
+            draw() {
+                // Corpo astronave
+                ctx.fillStyle = '#ff0000';
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#ff0000';
+                
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y - this.size);
+                ctx.lineTo(this.x - this.size/2, this.y + this.size/2);
+                ctx.lineTo(this.x, this.y + this.size/3);
+                ctx.lineTo(this.x + this.size/2, this.y + this.size/2);
+                ctx.closePath();
+                ctx.fill();
+
+                // Dettagli
+                ctx.fillStyle = '#ff6666';
+                ctx.fillRect(this.x - 5, this.y - 5, 10, 10);
+                
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        class Bullet {
+            constructor(x, y, targetX, targetY) {
+                this.x = x;
+                this.y = y;
+                const angle = Math.atan2(targetY - y, targetX - x);
+                this.vx = Math.cos(angle) * 10;
+                this.vy = Math.sin(angle) * 10;
+                this.size = 5;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+            }
+
+            draw() {
+                ctx.fillStyle = '#00ffff';
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#00ffff';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function initStars() {
+            for (let i = 0; i < 200; i++) {
+                gameState.stars.push(new Star());
+            }
+        }
+
+        function startLevel() {
+            const planet = planets[gameState.level];
+            gameState.enemies = [];
+            
+            for (let i = 0; i < planet.enemyCount; i++) {
+                setTimeout(() => {
+                    gameState.enemies.push(new Enemy());
+                }, i * 300);
+            }
+
+            document.getElementById('planet').textContent = `Pianeta: ${planet.name}`;
+            document.getElementById('level').textContent = `Livello: ${gameState.level + 1}`;
+        }
+
+        function showMessage(text) {
+            const msg = document.getElementById('message');
+            msg.textContent = text;
+            msg.style.animation = 'none';
+            setTimeout(() => {
+                msg.style.animation = 'messageFlash 0.8s ease-out';
+            }, 10);
+        }
+
+        function showLevelComplete() {
+            const lc = document.getElementById('levelComplete');
+            const planet = planets[gameState.level];
+            lc.innerHTML = `PIANETA ${planet.name.toUpperCase()}<br>CONQUISTATO!`;
+            lc.style.display = 'block';
+            
+            setTimeout(() => {
+                lc.style.display = 'none';
+                gameState.level++;
+                
+                if (gameState.level >= planets.length) {
+                    lc.innerHTML = `VITTORIA TOTALE!<br>HAI CONQUISTATO<br>TUTTI I PIANETI!`;
+                    lc.style.display = 'block';
+                    gameState.gameStarted = false;
+                } else {
+                    startLevel();
+                }
+            }, 2500);
+        }
+
+        function checkCollisions() {
+            for (let i = gameState.bullets.length - 1; i >= 0; i--) {
+                const bullet = gameState.bullets[i];
+                
+                for (let j = gameState.enemies.length - 1; j >= 0; j--) {
+                    const enemy = gameState.enemies[j];
+                    const dist = Math.hypot(bullet.x - enemy.x, bullet.y - enemy.y);
+                    
+                    if (dist < enemy.size) {
+                        // Esplosione
+                        for (let k = 0; k < 20; k++) {
+                            gameState.particles.push(new Particle(enemy.x, enemy.y, '#ff0000'));
+                            gameState.particles.push(new Particle(enemy.x, enemy.y, '#ffaa00'));
+                        }
+                        
+                        gameState.enemies.splice(j, 1);
+                        gameState.bullets.splice(i, 1);
+                        gameState.score += 100;
+                        document.getElementById('score').textContent = `Punteggio: ${gameState.score}`;
+                        
+                        showMessage('Hai sconfitto Massimiano');
+                        
+                        if (gameState.enemies.length === 0) {
+                            showLevelComplete();
+                        }
+                        
+                        break;
+                    }
+                }
+            }
+        }
+
+        function drawPlayer() {
+            const x = gameState.playerX;
+            const y = gameState.playerY;
+            
+            // Navicella del giocatore
+            ctx.fillStyle = '#00ffff';
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#00ffff';
+            
+            ctx.beginPath();
+            ctx.moveTo(x, y - 25);
+            ctx.lineTo(x - 20, y + 15);
+            ctx.lineTo(x, y + 5);
+            ctx.lineTo(x + 20, y + 15);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(x - 7, y - 5, 14, 10);
+            
+            ctx.shadowBlur = 0;
+
+            // Linea di mira
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(gameState.mouseX, gameState.mouseY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        function gameLoop() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Stelle
+            gameState.stars.forEach(star => {
+                star.update();
+                star.draw();
+            });
+
+            // Particelle
+            for (let i = gameState.particles.length - 1; i >= 0; i--) {
+                const p = gameState.particles[i];
+                p.update();
+                p.draw();
+                if (p.life <= 0) {
+                    gameState.particles.splice(i, 1);
+                }
+            }
+
+            // Nemici
+            gameState.enemies.forEach(enemy => {
+                enemy.update();
+                enemy.draw();
+            });
+
+            // Proiettili
+            for (let i = gameState.bullets.length - 1; i >= 0; i--) {
+                const bullet = gameState.bullets[i];
+                bullet.update();
+                bullet.draw();
+                
+                if (bullet.x < 0 || bullet.x > canvas.width || 
+                    bullet.y < 0 || bullet.y > canvas.height) {
+                    gameState.bullets.splice(i, 1);
+                }
+            }
+
+            drawPlayer();
+            checkCollisions();
+
+            if (gameState.gameStarted) {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            gameState.mouseX = e.clientX;
+            gameState.mouseY = e.clientY;
+        });
+
+        canvas.addEventListener('click', (e) => {
+            if (gameState.gameStarted) {
+                gameState.bullets.push(new Bullet(
+                    gameState.playerX,
+                    gameState.playerY,
+                    e.clientX,
+                    e.clientY
+                ));
+            }
+        });
+
+        document.getElementById('startButton').addEventListener('click', () => {
+            document.getElementById('startScreen').style.display = 'none';
+            gameState.gameStarted = true;
+            initStars();
+            startLevel();
+            gameLoop();
+        });
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gameState.playerX = canvas.width / 2;
+            gameState.playerY = canvas.height - 100;
+        });
+    </script>
+</body>
+</html>
